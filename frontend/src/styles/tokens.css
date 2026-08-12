@@ -1,0 +1,113 @@
+/**
+ * Design tokens — the single source of truth for colour, spacing, type and motion.
+ *
+ * Contrast notes: this is a dark theme, so *foreground* severity colours are the
+ * light end of each ramp (checked >= 4.5:1 against --c-surface / --c-abyss) while
+ * *fills* are translucent tints of the same hue. Never put white text on the
+ * mid-tone brand colours — use the -fg tokens.
+ */
+
+:root {
+  /* ── Ocean depths (backgrounds, darkest → lightest) ── */
+  --c-abyss: #04101f;
+  --c-deep: #071c33;
+  --c-surface: #0b2545;
+  --c-surface-2: #103156;
+  --c-surface-3: #14395f;
+
+  /* Translucent glass surfaces */
+  --c-glass: rgba(16, 49, 86, 0.55);
+  --c-glass-hi: rgba(20, 57, 95, 0.75);
+
+  /* ── Treasure gold (primary accent) ── */
+  --c-gold: #f5b700;
+  --c-gold-hi: #ffd76e;
+  --c-gold-dim: rgba(245, 183, 0, 0.14);
+  --c-gold-line: rgba(245, 183, 0, 0.22);
+
+  /* ── Sea foam (secondary accent) ── */
+  --c-aqua: #22d3ee;
+  --c-aqua-dim: rgba(34, 211, 238, 0.14);
+
+  /* ── Text ── */
+  --c-text: #eaf2fb;
+  --c-text-soft: #b9cbe0;
+  --c-text-mute: #8ba3bf;
+  --c-text-faint: #5f7794;
+
+  /* ── Lines ── */
+  --c-line: rgba(148, 190, 235, 0.14);
+  --c-line-hi: rgba(148, 190, 235, 0.26);
+
+  /* ── Severity: -fg for text/icons, -bg for fills, -line for borders ── */
+  --c-critical-fg: #fda4a4;
+  --c-critical-bg: rgba(239, 68, 68, 0.14);
+  --c-critical-line: rgba(239, 68, 68, 0.42);
+  --c-critical-solid: #ef4444;
+
+  --c-warning-fg: #fcd34d;
+  --c-warning-bg: rgba(245, 158, 11, 0.14);
+  --c-warning-line: rgba(245, 158, 11, 0.42);
+  --c-warning-solid: #f59e0b;
+
+  --c-good-fg: #6ee7b7;
+  --c-good-bg: rgba(16, 185, 129, 0.14);
+  --c-good-line: rgba(16, 185, 129, 0.42);
+  --c-good-solid: #10b981;
+
+  --c-info-fg: #93c5fd;
+  --c-info-bg: rgba(59, 130, 246, 0.14);
+  --c-info-line: rgba(59, 130, 246, 0.42);
+
+  /* ── Spacing scale ── */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+
+  /* ── Radii ── */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* ── Elevation ── */
+  --sh-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sh-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --sh-lg: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --sh-gold: 0 6px 28px rgba(245, 183, 0, 0.28);
+  --sh-inset: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* ── Type ── */
+  --f-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --f-mono: 'SF Mono', 'Cascadia Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --t-xs: 11px;
+  --t-sm: 13px;
+  --t-base: 15px;
+  --t-md: 17px;
+  --t-lg: 21px;
+  --t-xl: 27px;
+  --t-2xl: 36px;
+  --t-3xl: 48px;
+
+  /* ── Motion ── */
+  --e-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --e-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --e-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --d-fast: 140ms;
+  --d-mid: 240ms;
+  --d-slow: 420ms;
+
+  /* ── Layout ── */
+  --w-page: 1120px;
+  --h-header: 68px;
+}

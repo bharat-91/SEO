@@ -1,0 +1,38 @@
+# Vite
+.vite/
+dist/
+
+# Safety net: tsc must never emit into src (tsconfig sets noEmit).
+# If these ever reappear, module resolution will silently prefer them
+# over the .tsx sources.
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts
+!src/vite-env.d.ts
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Dev
+.cache/

@@ -1,0 +1,282 @@
+/* App shell, sticky header, and the layered animated ocean backdrop. */
+
+.app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Backdrop layers (all decorative, all behind content) ── */
+
+/* 1. Depth gradient: light at the surface, black in the abyss */
+.bg-depth {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(
+      120% 80% at 50% -10%,
+      #1b4f7d 0%,
+      var(--c-surface) 32%,
+      var(--c-deep) 60%,
+      var(--c-abyss) 100%
+    );
+}
+
+/* 2. God rays slanting down from the surface */
+.bg-rays {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  background: repeating-linear-gradient(
+    104deg,
+    transparent 0 60px,
+    rgba(170, 225, 255, 0.05) 60px 92px,
+    transparent 92px 190px
+  );
+  mask-image: linear-gradient(to bottom, black, transparent 62%);
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent 62%);
+  animation: rays-sway 18s var(--e-in-out) infinite;
+}
+
+@keyframes rays-sway {
+  0%,
+  100% {
+    transform: translateX(-2%) skewX(0deg);
+    opacity: 0.32;
+  }
+  50% {
+    transform: translateX(2%) skewX(1.5deg);
+    opacity: 0.5;
+  }
+}
+
+/* 3. Vignette to focus the centre */
+.bg-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    100% 70% at 50% 40%,
+    transparent 40%,
+    rgba(2, 8, 17, 0.55) 100%
+  );
+}
+
+/* 4. Rising bubbles */
+.bg-bubbles {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bubble {
+  position: absolute;
+  bottom: -60px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 32% 28%,
+    rgba(255, 255, 255, 0.5),
+    rgba(160, 215, 255, 0.12) 45%,
+    transparent 70%
+  );
+  border: 1px solid rgba(190, 230, 255, 0.16);
+  animation: bubble-rise linear infinite;
+}
+
+@keyframes bubble-rise {
+  0% {
+    transform: translate(0, 0) scale(0.7);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.65;
+  }
+  85% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translate(var(--drift, 20px), calc(-100vh - 80px)) scale(1.15);
+    opacity: 0;
+  }
+}
+
+/* 5. Wave bands sitting just under the header */
+.bg-waves {
+  position: absolute;
+  top: calc(var(--h-header) - 22px);
+  left: 0;
+  width: 100%;
+  height: 90px;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, black 10%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, black 10%, transparent);
+}
+
+.wave {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  background-repeat: repeat-x;
+  background-size: 50% 100%;
+  animation: wave-slide linear infinite;
+}
+
+@keyframes wave-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ── Header ── */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  height: var(--h-header);
+  padding: 0 var(--s-8);
+  background: rgba(4, 16, 31, 0.72);
+  backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid var(--c-gold-line);
+}
+
+/* Gold hairline glow along the bottom edge */
+.app-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--c-gold) 30%,
+    var(--c-gold-hi) 50%,
+    var(--c-gold) 70%,
+    transparent
+  );
+  opacity: 0.55;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: var(--t-md);
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.brand-mark {
+  font-size: 22px;
+  filter: drop-shadow(0 0 10px rgba(245, 183, 0, 0.5));
+  animation: mark-sway 5s var(--e-in-out) infinite;
+}
+
+@keyframes mark-sway {
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+}
+
+.brand-name {
+  background: linear-gradient(
+    92deg,
+    var(--c-gold) 0%,
+    #fff2c4 45%,
+    var(--c-gold) 90%
+  );
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gold-shimmer 7s linear infinite;
+}
+
+@keyframes gold-shimmer {
+  to {
+    background-position: 220% center;
+  }
+}
+
+.brand-sub {
+  color: var(--c-text-mute);
+  font-weight: 500;
+  font-size: var(--t-sm);
+}
+
+/* ── Main ── */
+.app-main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  width: 100%;
+  max-width: var(--w-page);
+  margin: 0 auto;
+  padding: var(--s-10) var(--s-8) var(--s-16);
+}
+
+.app-footer {
+  position: relative;
+  z-index: 1;
+  padding: var(--s-6) var(--s-8);
+  text-align: center;
+  font-size: var(--t-sm);
+  color: var(--c-text-faint);
+  border-top: 1px solid var(--c-line);
+}
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  .app-header {
+    padding: 0 var(--s-5);
+  }
+  .brand-sub {
+    display: none;
+  }
+  .app-main {
+    padding: var(--s-8) var(--s-5) var(--s-12);
+  }
+}
+
+@media (max-width: 520px) {
+  .brand {
+    font-size: var(--t-base);
+  }
+}
+
+/* ── Motion preferences ── */
+@media (prefers-reduced-motion: reduce) {
+  .bg-rays,
+  .bubble,
+  .wave,
+  .brand-mark,
+  .brand-name {
+    animation: none !important;
+  }
+  .bg-bubbles {
+    display: none;
+  }
+}
