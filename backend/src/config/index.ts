@@ -11,7 +11,6 @@ const envSchema = z.object({
     .string()
     .min(1, 'Required')
     .regex(/^mongodb(\+srv)?:\/\/\S+$/, 'Must be a valid mongodb:// or mongodb+srv:// connection string'),
-  FRONTEND_URL: z.string().url().default('http://localhost:5173'),
   CRAWLER_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
   CRAWLER_MAX_RESPONSE_BYTES: z.coerce.number().int().positive().default(5242880),
   CRAWLER_CONCURRENCY: z.coerce.number().int().positive().default(5),
