@@ -1,8 +1,7 @@
-import { useState, FormEvent } from 'react';
+import { useRef, useState, FormEvent } from 'react';
 import { isValidUrl, normalizeUrl } from '../../utils/validators';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { MIN_URL_LENGTH, MAX_URL_LENGTH } from '../../constants/ui';
-import { theme } from '../../constants/theme';
 
 export interface StartAuditFormProps {
   onSubmit: (url: string) => void;
@@ -11,23 +10,33 @@ export interface StartAuditFormProps {
   onDismissError: () => void;
 }
 
-export function StartAuditForm({ onSubmit, loading, error, onDismissError }: StartAuditFormProps) {
+const EXAMPLES = ['example.com', 'wikipedia.org', 'nodejs.org', 'zensorsolutions.com'];
+
+const FEATURES = [
+  { icon: '🧭', title: 'Navigation-aware', note: 'Finds your primary menu and audits the pages it links to.' },
+  { icon: '🏷️', title: 'Metadata checks', note: 'Titles, meta descriptions, canonicals and robots directives.' },
+  { icon: '🔠', title: 'Structure checks', note: 'H1 usage, HTTP status codes and internal link counts.' },
+  { icon: '📦', title: 'Weight checks', note: 'Flags pages heavier than 2 MB that will slow crawlers down.' },
+];
+
+export function StartAuditForm({
+  onSubmit,
+  loading,
+  error,
+  onDismissError,
+}: StartAuditFormProps) {
   const [url, setUrl] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   function validate(candidate: string): string | null {
-    if (candidate.trim().length === 0) {
-      return 'Please enter a website URL.';
-    }
-    if (candidate.trim().length < MIN_URL_LENGTH) {
-      return 'URL is too short.';
-    }
-    if (candidate.trim().length > MAX_URL_LENGTH) {
-      return 'URL is too long.';
-    }
-    const normalized = normalizeUrl(candidate);
-    if (!isValidUrl(normalized)) {
-      return 'Please enter a valid website URL (e.g. https://example.com).';
+    const trimmed = candidate.trim();
+
+    if (trimmed.length === 0) return 'Please enter a website URL.';
+    if (trimmed.length < MIN_URL_LENGTH) return 'That URL looks too short.';
+    if (trimmed.length > MAX_URL_LENGTH) return 'That URL is too long.';
+    if (!isValidUrl(normalizeUrl(trimmed))) {
+      return 'Please enter a valid website URL, for example https://example.com';
     }
     return null;
   }
@@ -35,10 +44,10 @@ export function StartAuditForm({ onSubmit, loading, error, onDismissError }: Sta
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
-    const validationMessage = validate(url);
-    setValidationError(validationMessage);
-
-    if (validationMessage) {
+    const message = validate(url);
+    setValidationError(message);
+    if (message) {
+      inputRef.current?.focus();
       return;
     }
 
@@ -47,30 +56,45 @@ export function StartAuditForm({ onSubmit, loading, error, onDismissError }: Sta
 
   function handleChange(value: string) {
     setUrl(value);
-    if (validationError) {
-      setValidationError(null);
-    }
-    if (error) {
-      onDismissError();
-    }
+    if (validationError) setValidationError(null);
+    if (error) onDismissError();
   }
 
-  const displayError = validationError || error;
+  function useExample(example: string) {
+    setUrl(example);
+    setValidationError(null);
+    if (error) onDismissError();
+    inputRef.current?.focus();
+  }
+
+  const displayError = validationError ?? error;
 
   return (
-    <div style={styles.container}>
-      <div style={styles.compass} aria-hidden="true">
-        🧭
-      </div>
-      <h2 style={styles.title}>Chart Your Site's Waters</h2>
-      <p style={styles.subtitle}>
-        Set sail and map every technical SEO issue hiding beneath the surface.
+    <div className="hero">
+      <span className="hero-badge rise" style={{ ['--i' as string]: 0 }}>
+        <span aria-hidden="true">🏴‍☠️</span> Technical SEO Audit
+      </span>
+
+      <h1 className="hero-title rise" style={{ ['--i' as string]: 1 }}>
+        Chart your site&rsquo;s <span className="hero-accent">hidden waters</span>
+      </h1>
+
+      <p className="hero-sub rise" style={{ ['--i' as string]: 2 }}>
+        Crawl your homepage and primary navigation, then surface every technical SEO
+        issue lurking beneath — in seconds.
       </p>
 
-      <form onSubmit={handleSubmit} style={styles.form} noValidate>
-        <div style={styles.inputRow}>
+      <form
+        onSubmit={handleSubmit}
+        className="hero-form rise"
+        style={{ ['--i' as string]: 3 }}
+        noValidate
+      >
+        <div className="hero-row">
           <input
+            ref={inputRef}
             type="text"
+            className="field"
             value={url}
             onChange={(e) => handleChange(e.target.value)}
             placeholder="https://example.com"
@@ -78,69 +102,62 @@ export function StartAuditForm({ onSubmit, loading, error, onDismissError }: Sta
             aria-invalid={displayError ? 'true' : 'false'}
             aria-describedby={displayError ? 'url-error' : undefined}
             disabled={loading}
-            style={styles.input}
+            autoComplete="url"
+            spellCheck={false}
           />
-          <button
-            type="submit"
-            className="button-primary"
-            disabled={loading}
-            style={styles.button}
-          >
-            {loading ? 'Setting sail…' : '⚓ Run Audit'}
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? (
+              'Setting sail…'
+            ) : (
+              <>
+                <span aria-hidden="true">⚓</span> Run Audit
+              </>
+            )}
           </button>
+        </div>
+
+        <div className="hero-examples">
+          <span>Try:</span>
+          {EXAMPLES.map((example) => (
+            <button
+              key={example}
+              type="button"
+              className="example-chip"
+              onClick={() => useExample(example)}
+              disabled={loading}
+            >
+              {example}
+            </button>
+          ))}
         </div>
 
         {displayError && (
           <ErrorAlert
             id="url-error"
             error={displayError}
-            onDismiss={validationError ? () => setValidationError(null) : onDismissError}
+            title={validationError ? 'Check that URL' : 'Rough seas ahead'}
+            onDismiss={
+              validationError ? () => setValidationError(null) : onDismissError
+            }
           />
         )}
       </form>
+
+      <div className="features">
+        {FEATURES.map((feature, i) => (
+          <div
+            key={feature.title}
+            className="feature rise"
+            style={{ ['--i' as string]: i + 4 }}
+          >
+            <span className="feature-icon" aria-hidden="true">
+              {feature.icon}
+            </span>
+            <p className="feature-title">{feature.title}</p>
+            <p className="feature-note">{feature.note}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    maxWidth: '620px',
-    margin: '60px auto',
-    textAlign: 'center' as const,
-  },
-  compass: {
-    fontSize: '48px',
-    marginBottom: '12px',
-    animation: 'bob 4s ease-in-out infinite',
-    display: 'inline-block',
-  },
-  title: {
-    fontSize: '36px',
-    marginBottom: '8px',
-    color: theme.textPrimary,
-  },
-  subtitle: {
-    fontSize: '16px',
-    marginBottom: '32px',
-    color: theme.textMuted,
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '16px',
-  },
-  inputRow: {
-    display: 'flex',
-    gap: '12px',
-  },
-  input: {
-    flex: 1,
-    fontSize: '16px',
-    padding: '12px 16px',
-  },
-  button: {
-    whiteSpace: 'nowrap' as const,
-    padding: '12px 24px',
-    fontSize: '16px',
-  },
-};

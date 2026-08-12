@@ -1,104 +1,153 @@
 import { useEffect, useRef, useState } from 'react';
 
-const TRAIL_LENGTH = 6;
-const EASE = 0.28;
+const SPARKS = 8;
+const LEAD_EASE = 0.35;
+const TAIL_EASE = 0.24;
 
 /**
- * Decorative "treasure spark" trail that follows the cursor.
- * Disabled for touch devices and prefers-reduced-motion — it's pure flair,
- * never load-bearing for any interaction, and pointer-events: none so it
- * can never intercept a click.
+ * Decorative gold "treasure spark" cursor trail plus a soft spotlight that
+ * lifts the surface under the pointer.
+ *
+ * Guards: skipped entirely on touch/coarse pointers and when the user prefers
+ * reduced motion. The layer is aria-hidden with pointer-events:none, so it can
+ * never intercept input or be announced by assistive tech.
  */
 export function CursorTrail() {
   const [enabled, setEnabled] = useState(false);
-  const dotsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const positions = useRef(
-    Array.from({ length: TRAIL_LENGTH }, () => ({ x: -100, y: -100 }))
+  const layerRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const sparkRefs = useRef<(HTMLSpanElement | null)[]>([]);
+
+  const mouse = useRef({ x: -200, y: -200 });
+  const trail = useRef(
+    Array.from({ length: SPARKS }, () => ({ x: -200, y: -200 }))
   );
-  const mouse = useRef({ x: -100, y: -100 });
+  const seen = useRef(false);
 
   useEffect(() => {
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const finePointer = window.matchMedia('(pointer: fine)').matches;
-    setEnabled(!reducedMotion && finePointer);
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setEnabled(!coarse && !reduced);
   }, []);
 
   useEffect(() => {
     if (!enabled) return;
 
-    function handleMouseMove(e: MouseEvent) {
-      mouse.current.x = e.clientX;
-      mouse.current.y = e.clientY;
+    function onMove(event: MouseEvent) {
+      mouse.current.x = event.clientX;
+      mouse.current.y = event.clientY;
+
+      if (!seen.current) {
+        seen.current = true;
+        // Snap the trail to the first known position so it doesn't fly in
+        // from the corner on the very first movement.
+        trail.current.forEach((p) => {
+          p.x = event.clientX;
+          p.y = event.clientY;
+        });
+        if (layerRef.current) layerRef.current.style.opacity = '1';
+      }
     }
-    window.addEventListener('mousemove', handleMouseMove);
 
-    let rafId: number;
-    function animate() {
-      let targetX = mouse.current.x;
-      let targetY = mouse.current.y;
+    function onLeave() {
+      if (layerRef.current) layerRef.current.style.opacity = '0';
+    }
 
-      positions.current.forEach((pos, i) => {
-        pos.x += (targetX - pos.x) * EASE;
-        pos.y += (targetY - pos.y) * EASE;
-        targetX = pos.x;
-        targetY = pos.y;
+    function onEnter() {
+      if (seen.current && layerRef.current) layerRef.current.style.opacity = '1';
+    }
 
-        const dot = dotsRef.current[i];
-        if (dot) {
-          dot.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+    window.addEventListener('mousemove', onMove, { passive: true });
+    document.addEventListener('mouseleave', onLeave);
+    document.addEventListener('mouseenter', onEnter);
+
+    let raf = 0;
+    const render = () => {
+      let tx = mouse.current.x;
+      let ty = mouse.current.y;
+
+      trail.current.forEach((point, i) => {
+        const ease = i === 0 ? LEAD_EASE : TAIL_EASE;
+        point.x += (tx - point.x) * ease;
+        point.y += (ty - point.y) * ease;
+        tx = point.x;
+        ty = point.y;
+
+        const node = sparkRefs.current[i];
+        if (node) {
+          const scale = 1 - i / (SPARKS + 2);
+          node.style.transform = `translate3d(${point.x}px, ${point.y}px, 0) translate(-50%, -50%) scale(${scale})`;
         }
       });
 
-      rafId = requestAnimationFrame(animate);
-    }
-    rafId = requestAnimationFrame(animate);
+      const head = trail.current[0];
+      if (glowRef.current) {
+        glowRef.current.style.transform = `translate3d(${head.x}px, ${head.y}px, 0) translate(-50%, -50%)`;
+      }
+
+      raf = requestAnimationFrame(render);
+    };
+    raf = requestAnimationFrame(render);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(rafId);
+      window.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseleave', onLeave);
+      document.removeEventListener('mouseenter', onEnter);
+      cancelAnimationFrame(raf);
     };
   }, [enabled]);
 
   if (!enabled) return null;
 
   return (
-    <div aria-hidden="true" style={styles.container}>
-      {Array.from({ length: TRAIL_LENGTH }).map((_, i) => {
-        const size = 16 - i * 2;
-        return (
-          <div
-            key={i}
-            ref={(el) => {
-              dotsRef.current[i] = el;
-            }}
-            style={{
-              ...styles.dot,
-              width: `${size}px`,
-              height: `${size}px`,
-              opacity: 1 - i * 0.14,
-            }}
-          />
-        );
-      })}
+    <div ref={layerRef} aria-hidden="true" style={styles.layer}>
+      <div ref={glowRef} style={styles.glow} />
+      {Array.from({ length: SPARKS }).map((_, i) => (
+        <span
+          key={i}
+          ref={(el) => {
+            sparkRefs.current[i] = el;
+          }}
+          style={{
+            ...styles.spark,
+            width: `${11 - i}px`,
+            height: `${11 - i}px`,
+            opacity: 0.9 - i * 0.1,
+          }}
+        />
+      ))}
     </div>
   );
 }
 
 const styles = {
-  container: {
+  layer: {
     position: 'fixed' as const,
     inset: 0,
-    pointerEvents: 'none' as const,
     zIndex: 9999,
+    pointerEvents: 'none' as const,
+    opacity: 0,
+    transition: 'opacity 220ms ease',
   },
-  dot: {
+  glow: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: '260px',
+    height: '260px',
+    borderRadius: '50%',
+    background:
+      'radial-gradient(circle, rgba(245,183,0,0.10) 0%, rgba(34,211,238,0.05) 40%, transparent 68%)',
+    willChange: 'transform',
+  },
+  spark: {
     position: 'absolute' as const,
     top: 0,
     left: 0,
     borderRadius: '50%',
     background:
-      'radial-gradient(circle, rgba(245,183,0,0.85) 0%, rgba(245,183,0,0) 70%)',
-    transform: 'translate(-100px, -100px)',
+      'radial-gradient(circle at 35% 35%, #fff6d6 0%, #f5b700 45%, rgba(245,183,0,0) 72%)',
+    boxShadow: '0 0 10px rgba(245,183,0,0.55)',
     willChange: 'transform',
   },
 };

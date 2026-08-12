@@ -1,1410 +1,895 @@
+# FINAL DOCKERIZATION TASK
 # Zensor Solutions — Technical SEO Audit Tool
 
-## Master Implementation Prompt
+You are continuing work on an existing full-stack Technical SEO Audit application.
 
-You are acting as a **Senior Full-Stack Engineer and Technical Lead** responsible for building a production-quality take-home assignment.
+The frontend and backend are already implemented and the source code is already available in the repository.
 
-I need you to build the complete application described below.
+Your ONLY task in this phase is to productionize and containerize the existing application.
 
-Do not treat this as a tutorial or a toy project. Treat it as a **real production-ready MVP** that will be reviewed by experienced developers.
+Do NOT rewrite the existing application unnecessarily.
 
-The project should prioritize:
+Do NOT change working business logic unless a Docker-related configuration change requires it.
 
-1. Correctness
-2. Clean architecture
-3. Maintainability
-4. Good API design
-5. Reliable crawling
-6. Clear separation of concerns
-7. Good UX
-8. Sensible error handling
-9. Testability
-10. Practical engineering decisions
+Do NOT introduce new application features.
 
-Do NOT over-engineer the project beyond what is reasonable for a 6–8 hour take-home assignment.
+The final result must satisfy the assignment requirement:
 
----
+"Full project runnable with:
 
-# 1. Assignment
+docker compose up
 
-Build a full-stack **Technical SEO Audit Tool**.
+Should start:
+- Backend API
+- Frontend UI
+- Database (if used)
+- No manual setup expected."
 
-The workflow is:
+==================================================
+1. EXISTING TECHNOLOGY STACK
+==================================================
 
-```text
-Enter Website URL
-       ↓
-Start Audit
-       ↓
-Backend starts navigation-based crawl
-       ↓
-Discover relevant internal pages
-       ↓
-Analyze SEO properties
-       ↓
-Persist audit + page results
-       ↓
-Frontend displays audit progress/result
-       ↓
-User explores page-level SEO issues
-```
+Backend:
+- Node.js
+- TypeScript
+- Express.js
+- MongoDB
+- Mongoose
 
-The application should allow a user to:
+Frontend:
+- React
+- TypeScript
+- Vite
 
-* Enter a website URL
-* Start an SEO audit
-* Crawl the homepage
-* Detect the site's primary navigation
-* Crawl internal links found in the primary navigation
-* Deduplicate URLs
-* Only crawl same-domain URLs
-* Analyze every crawled page
-* Persist the audit results
-* View summary metrics
-* View page-level issues
-* Expand individual pages to inspect detailed metrics
+Database:
+- MongoDB
 
----
+The repository already contains the working frontend and backend.
 
-# 2. REQUIRED TECH STACK
+Before modifying anything, inspect the actual repository and work with the existing structure.
 
-Use exactly the following core stack unless there is a very strong technical reason not to.
+==================================================
+2. IMPORTANT DATABASE DECISION
+==================================================
 
-## Backend
+The application currently uses a MongoDB connection string, potentially MongoDB Atlas.
 
-* Node.js
-* TypeScript
-* Express.js
-* MongoDB
-* Mongoose
+For LOCAL NON-DOCKER DEVELOPMENT, do not unnecessarily remove or break the existing MongoDB configuration.
 
-Do NOT use NestJS.
+For DOCKER, the preferred architecture is:
 
-## Frontend
+                    Docker Compose
+                         |
+          ┌──────────────┼──────────────┐
+          ↓              ↓              ↓
+      frontend        backend        mongodb
+       React          Express        MongoDB
+                        |
+                        ↓
+                    mongodb:27017
 
-* React
-* TypeScript
-* Vite
+The Dockerized backend MUST connect to the MongoDB Docker service.
 
-Do NOT use Next.js.
+Example:
 
-## HTTP
+MONGODB_URI=mongodb://mongodb:27017/seo-audit
 
-Use a clean API client abstraction.
+Do NOT use:
 
-Axios or native fetch are both acceptable.
+MONGODB_URI=mongodb://localhost:27017/seo-audit
 
-## Validation
+inside the backend container.
 
-Use a proper schema validation library such as Zod where appropriate.
+Do NOT require the evaluator to provide MongoDB Atlas credentials.
 
-## Crawling / HTML parsing
+Do NOT commit any real MongoDB Atlas credentials.
 
-Choose appropriate mature libraries for:
+The Docker environment should be self-contained.
 
-* HTTP requests
-* HTML parsing
-* URL normalization
-* HTML inspection
+==================================================
+3. PHASED EXECUTION
+==================================================
 
-For example, libraries such as:
+Do not implement everything blindly in one step.
 
-* Cheerio
-* Axios / native fetch
-* `p-limit` or equivalent if concurrency control is required
+Work through the following phases.
 
-Choose libraries based on reliability and simplicity.
+PHASE 1 — INSPECT
 
-## Database
+PHASE 2 — DOCKER ARCHITECTURE
 
-MongoDB with Mongoose.
+PHASE 3 — BACKEND CONTAINER
 
-Use proper schemas/models.
+PHASE 4 — FRONTEND CONTAINER
 
-Do not store everything as an unstructured MongoDB document if a clean schema makes the system easier to maintain.
+PHASE 5 — MONGODB CONTAINER
 
----
+PHASE 6 — DOCKER COMPOSE
 
-# 3. IMPORTANT DEVELOPMENT STRATEGY
+PHASE 7 — ENVIRONMENT + NETWORKING
 
-Do NOT attempt to generate the entire project blindly in one step.
+PHASE 8 — HEALTH CHECKS + STARTUP RELIABILITY
 
-First analyze the requirements and divide the project into sensible implementation phases.
+PHASE 9 — SECURITY + IMAGE OPTIMIZATION
 
-A reasonable structure would be something similar to:
+PHASE 10 — FULL INTEGRATION TEST
 
-### Phase 0 — Architecture & Planning
+PHASE 11 — DOCUMENTATION
 
-Define:
+After each phase:
 
-* project structure
-* backend architecture
-* frontend architecture
-* database models
-* crawling strategy
-* API contracts
-* SEO analysis strategy
-* error handling strategy
-* state management approach
-* testing strategy
+1. Implement the phase.
+2. Inspect your changes.
+3. Run relevant validation.
+4. Fix problems.
+5. Update IMPLEMENTATION.md.
+6. Report what was done.
 
-Do not start coding until the architecture is clear.
+Do not skip validation.
 
----
+You may combine very small dependent phases if necessary, but do not proceed through the entire project without validation.
 
-### Phase 1 — Backend Foundation
+==================================================
+4. PHASE 1 — INSPECT EXISTING PROJECT
+==================================================
 
-Implement:
+Before changing files, inspect:
 
-* Express application
-* TypeScript configuration
-* environment configuration
-* MongoDB connection
-* application bootstrap
-* centralized error handling
-* request validation
-* logging
-* API structure
-* health endpoint
-* basic project configuration
+- repository structure
+- backend/package.json
+- frontend/package.json
+- backend source structure
+- frontend source structure
+- TypeScript configuration
+- existing scripts
+- backend port
+- frontend port
+- MongoDB connection implementation
+- existing environment variables
+- existing API base URL
+- CORS configuration
+- existing health endpoint
+- existing README.md
+- existing IMPLEMENTATION.md
+- existing .gitignore
 
----
+Determine the actual commands used by the project.
 
-### Phase 2 — SEO Crawler Engine
+For example:
 
-Implement the core crawling engine.
+Backend:
+- dependency installation
+- development command
+- build command
+- production start command
+
+Frontend:
+- dependency installation
+- development command
+- build command
+- production serving strategy
+
+Do NOT assume these commands.
+
+Read package.json and use the actual scripts.
+
+At the end of Phase 1 provide:
+
+- current architecture
+- current runtime requirements
+- Docker-specific issues
+- files that need to be created
+- files that need to be modified
+- proposed Docker architecture
+
+Then continue only when the architecture is clear.
+
+==================================================
+5. PHASE 2 — FINAL DOCKER ARCHITECTURE
+==================================================
+
+Use Docker Compose.
+
+Services:
+
+frontend
+backend
+mongodb
+
+Architecture:
+
+Browser
+   |
+   | HTTP
+   ↓
+Frontend container
+   |
+   | Browser API requests
+   ↓
+Backend container
+   |
+   | MongoDB protocol
+   ↓
+MongoDB container
+
+Important:
+
+The browser and Docker containers have different networking contexts.
+
+Do NOT configure the browser to call:
+
+http://backend:5000
+
+because "backend" is a Docker-internal hostname and is not necessarily resolvable by the user's browser.
+
+The frontend's browser-side API URL should use a host-accessible address such as:
+
+http://localhost:5000
+
+or an equivalent configuration.
+
+Backend → MongoDB SHOULD use:
+
+mongodb://mongodb:27017/seo-audit
+
+because "mongodb" is the Docker Compose service hostname.
+
+==================================================
+6. PHASE 3 — BACKEND DOCKERFILE
+==================================================
+
+Create:
+
+backend/Dockerfile
+
+Use a multi-stage production-oriented Docker build where appropriate.
 
 Requirements:
 
-* Start from homepage
-* Fetch homepage HTML
-* Identify primary/main navigation
-* Extract internal links from primary navigation
-* Normalize URLs
-* Deduplicate URLs
-* Restrict crawling to the same domain
-* Avoid duplicate requests
-* Handle redirects
-* Handle HTTP errors
-* Handle invalid URLs
-* Handle pages that cannot be fetched
-* Prevent crawler from becoming stuck
-* Respect a sensible concurrency limit
-* Avoid infinite crawling
+- install dependencies
+- build TypeScript
+- run compiled production code
+- do not run development server
+- do not copy host node_modules
+- do not copy .env files
+- minimize final image size
+- use a non-root user if practical
+- expose the actual backend port
+- use the existing production start script
 
-The crawler should be designed as a reusable service rather than being tightly coupled to Express controllers.
+Do NOT invent a production command without checking package.json.
 
----
+If the existing backend has a build problem, fix only what is necessary for a correct production build.
 
-### Phase 3 — SEO Analyzer
+The Docker runtime image should contain only what it needs.
 
-For every crawled page calculate:
+==================================================
+7. PHASE 4 — FRONTEND DOCKERFILE
+==================================================
 
-### Title
+Create:
 
-Check:
+frontend/Dockerfile
 
-* exists
-* length between 30–65 characters
+Use a multi-stage build.
 
-Issues should distinguish between:
+Stage 1:
+- install dependencies
+- build React/Vite application
 
-* missing title
-* title too short
-* title too long
+Stage 2:
+- serve production static assets using Nginx or another lightweight production server
 
-### Meta Description
+Do NOT use:
 
-Check:
+npm run dev
 
-* exists
-* length between 70–160 characters
+as the production container command.
 
-Issues:
+If using Nginx:
 
-* missing description
-* description too short
-* description too long
+Create an appropriate nginx configuration.
 
-### H1
+Ensure SPA routing works correctly.
 
-Check:
+For example, routes should fall back to index.html where required.
 
-* exactly one H1
+The final image should not contain unnecessary development dependencies.
 
-Issues:
+==================================================
+8. PHASE 5 — MONGODB CONTAINER
+==================================================
 
-* missing H1
-* multiple H1s
+Use an official MongoDB Docker image.
 
-### Canonical
+The MongoDB service should:
 
-Check:
+- use a named Docker volume
+- persist data
+- be available to the backend
+- not need to be exposed publicly unless necessary
 
-* canonical tag exists
+Example conceptual configuration:
 
-Issue:
+mongodb:
+  image: mongo
+  volumes:
+    - mongodb_data:/data/db
 
-* canonical missing
+Use a sensible database name.
 
-### Noindex
+The backend should connect using the service name:
 
-Detect:
+mongodb://mongodb:27017/seo-audit
 
-* `<meta name="robots">`
-* relevant noindex directives
+Do not hard-code credentials unnecessarily.
 
-Issue:
+Do not put MongoDB Atlas credentials anywhere in the Docker configuration.
 
-* noindex detected
+==================================================
+9. PHASE 6 — DOCKER COMPOSE
+==================================================
 
-### HTTP status
+Create:
 
-Record:
+docker-compose.yml
 
-* HTTP status code
+The primary evaluator command must be:
 
-Flag non-2xx pages as appropriate.
+docker compose up --build
 
-### Page size
+This must start:
 
-Calculate response size.
+1. MongoDB
+2. Backend
+3. Frontend
 
-Flag:
+Use a shared Docker network.
 
-* page larger than 2 MB
+Expose:
 
-### Internal links
+Frontend:
+localhost:<frontend-port>
 
-Calculate:
+Backend:
+localhost:<backend-port>
 
-* number of internal links present on the page
+MongoDB:
+prefer internal-only access unless host access is genuinely required.
 
----
+Use environment variables rather than hard-coded configuration wherever practical.
 
-# 4. ISSUE CODES
+Example conceptual configuration:
 
-Use consistent machine-readable issue codes.
+services:
+
+  mongodb:
+    image: mongo
+    volumes:
+      - mongodb_data:/data/db
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/seo-audit
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      backend:
+        condition: service_started
+
+volumes:
+  mongodb_data:
+
+Adjust this according to the actual application.
+
+Do not blindly copy this example.
+
+==================================================
+10. PHASE 7 — ENVIRONMENT CONFIGURATION
+==================================================
+
+Create or update:
+
+.env.example
+
+Document all required variables.
+
+Separate:
+
+LOCAL DEVELOPMENT VARIABLES
+
+from:
+
+DOCKER VARIABLES
+
+The evaluator should not need a real Atlas connection string.
 
 For example:
 
-```text
-TITLE_MISSING
-TITLE_TOO_SHORT
-TITLE_TOO_LONG
+Docker backend:
 
-META_DESCRIPTION_MISSING
-META_DESCRIPTION_TOO_SHORT
-META_DESCRIPTION_TOO_LONG
+MONGODB_URI=mongodb://mongodb:27017/seo-audit
 
-H1_MISSING
-H1_MULTIPLE
+Frontend browser:
 
-CANONICAL_MISSING
+VITE_API_URL=http://localhost:5000
 
-NOINDEX
+Use the actual ports discovered from the project.
 
-NON_200
+IMPORTANT:
 
-PAGE_SIZE_TOO_LARGE
-```
+Vite environment variables are compiled into the frontend.
 
-Do not scatter arbitrary strings throughout the application.
+Therefore:
 
-Create a centralized issue definition/type system where practical.
+- never put secrets in VITE_* variables
+- never put MongoDB credentials in VITE_* variables
+- never expose backend secrets to the browser
 
-Each issue should also have enough metadata for the frontend to determine severity and display a human-readable label.
+==================================================
+11. PHASE 8 — CORS + NETWORKING
+==================================================
 
----
+Inspect the current backend CORS configuration.
 
-# 5. PAGE RESULT MODEL
+Ensure the Dockerized frontend can call the backend.
 
-Each crawled page should retain information similar to:
+Use the correct frontend origin.
 
-```json
+For example:
+
+FRONTEND_URL=http://localhost:5173
+
+Do not blindly use:
+
+origin: "*"
+
+unless the existing architecture genuinely requires it.
+
+The configuration should work when the evaluator opens the frontend from their browser.
+
+==================================================
+12. PHASE 9 — HEALTH CHECKS
+==================================================
+
+If the backend does not already have:
+
+GET /health
+
+add it.
+
+Example response:
+
 {
-  "url": "https://example.com/pricing",
-  "status_code": 200,
-  "issues": [
-    "TITLE_MISSING",
-    "META_DESCRIPTION_TOO_SHORT"
-  ],
-  "metrics": {
-    "title_length": 0,
-    "meta_description_length": 45,
-    "h1_count": 2,
-    "page_size_kb": 840,
-    "internal_link_count": 12
-  }
+  "status": "ok"
 }
-```
 
-You may improve this structure if there is a strong architectural reason.
+Do not expose secrets or internal infrastructure details.
 
-Do not introduce unnecessary complexity.
+Add a MongoDB healthcheck in Docker Compose where appropriate.
 
----
+Do not assume:
 
-# 6. AUDIT DATABASE MODEL
+depends_on:
+  - mongodb
 
-Design a sensible MongoDB schema.
+means MongoDB is actually ready to accept connections.
 
-At minimum an audit should contain:
+The backend should start reliably even when MongoDB takes a few seconds to initialize.
 
-```text
-audit_id
-url
-status
-created_at
-updated_at
-summary
-pages
-```
+==================================================
+13. PHASE 10 — DOCKERIGNORE
+==================================================
 
-Consider whether page results should be embedded or stored separately.
+Create:
 
-Make the decision based on:
+backend/.dockerignore
+frontend/.dockerignore
 
-* expected document size
-* MongoDB document limits
-* querying needs
-* simplicity
-* take-home scope
+At minimum exclude:
 
-Explain the decision in `IMPLEMENTATION.md`.
+node_modules
+dist
+build
+coverage
+.env
+.env.*
+.git
+*.log
 
-Audit status should support something like:
+Do not copy local dependencies into Docker.
 
-```text
-PENDING
-RUNNING
-COMPLETED
-FAILED
-```
+Do not copy secrets.
 
----
+==================================================
+14. PHASE 11 — SECURITY
+==================================================
 
-# 7. REQUIRED BACKEND API
+Review Docker configuration for:
 
-## Start Audit
+- secrets
+- credentials
+- MongoDB Atlas URI
+- API keys
+- unnecessary exposed ports
+- running containers as root
+- unnecessary files
+- unnecessary services
 
-```http
-POST /audit
-```
+Do not commit:
 
-Request:
+.env
 
-```json
-{
-  "url": "https://example.com"
-}
-```
+Do not expose MongoDB to the public internet unnecessarily.
 
-Behavior:
+Do not place credentials inside:
 
-1. Validate URL
-2. Create audit record
-3. Start audit processing
-4. Do not block the HTTP request until the entire crawl completes
-5. Return the audit ID immediately
+Dockerfile
+docker-compose.yml
+frontend source
+Vite variables
+README
 
-Example:
+Only `.env.example` may contain placeholders.
 
-```json
-{
-  "audit_id": "abc123",
-  "status": "RUNNING"
-}
-```
+==================================================
+15. PHASE 12 — PRODUCTION IMAGE OPTIMIZATION
+==================================================
 
-The audit execution should happen asynchronously.
+Use multi-stage builds where appropriate.
 
-Do NOT make the POST request wait for the entire crawl.
+Backend final image should not contain:
 
-For this take-home, a background/in-process job architecture is acceptable.
+- unnecessary source files
+- development dependencies
+- local node_modules
+- .env files
 
-Do not introduce Redis/BullMQ unless genuinely necessary.
+Frontend final image should contain only:
 
----
+- built static assets
+- web server configuration
+- required runtime files
 
-## Fetch Audit
+Do not obsess over image size.
 
-```http
-GET /audit/:audit_id
-```
+Prefer correctness and maintainability over extreme optimization.
 
-Return the audit status and, when completed, the results.
+==================================================
+16. PHASE 13 — FULL DOCKER TEST
+==================================================
 
-Example:
+Perform a clean test.
 
-```json
-{
-  "audit_id": "abc123",
-  "url": "https://example.com",
-  "status": "COMPLETED",
-  "summary": {
-    "total_pages": 5,
-    "missing_titles": 1,
-    "multiple_h1": 2,
-    "noindex_pages": 0,
-    "non_200_pages": 1
-  },
-  "pages": [
-    {
-      "url": "https://example.com/pricing",
-      "status_code": 200,
-      "issues": [
-        "TITLE_MISSING",
-        "META_DESCRIPTION_TOO_SHORT"
-      ],
-      "metrics": {
-        "title_length": 0,
-        "meta_description_length": 45,
-        "h1_count": 2,
-        "page_size_kb": 840,
-        "internal_link_count": 12
-      }
-    }
-  ]
-}
-```
+First:
 
-You may add useful fields if they improve the product.
-
----
-
-# 8. FRONTEND REQUIREMENTS
-
-Build a clean React + TypeScript interface.
-
-Do not spend excessive time on visual decoration.
-
-The UI should feel like a real SaaS product.
-
----
-
-# SCREEN 1 — START AUDIT
-
-Include:
-
-* application title
-* short explanation
-* URL input
-* validation
-* Start Audit CTA
-* loading state
-* error state
-
-Example:
-
-```text
-Technical SEO Audit
-
-Analyze your website's technical SEO health.
-
-[ https://example.com                 ]
-
-             [ Run Audit ]
-```
-
-Validation should happen before sending invalid requests.
-
----
-
-# SCREEN 2 — AUDIT OVERVIEW
-
-Show:
-
-* Audit URL
-* Audit status
-* Total pages crawled
-* Total issues
-* Missing titles
-* Meta description issues
-* H1 issues
-* Canonical issues
-* Noindex pages
-* Non-200 pages
-* Pages >2MB
-
-Use clear metric cards.
-
-Do not overwhelm the user.
-
----
-
-# SCREEN 3 — PAGE LEVEL BREAKDOWN
-
-Create a table/list containing:
-
-* Page URL
-* HTTP status
-* issue count
-* severity
-* important metrics
-
-Rows should be expandable.
-
-Expanded row should show:
-
-```text
-Title length
-Meta description length
-H1 count
-Canonical
-Noindex
-Page size
-Internal links
-Detected issues
-```
-
-Issues should have clear labels and severity indicators.
-
-For example:
-
-```text
-🔴 Critical
-🟠 Warning
-🟢 Healthy
-```
-
-The exact visual implementation is your choice.
-
----
-
-# 9. FRONTEND ARCHITECTURE
-
-Keep API communication separate from UI components.
-
-Prefer a structure similar to:
-
-```text
-src/
-├── api/
-├── components/
-├── features/
-│   └── audit/
-├── hooks/
-├── pages/
-├── types/
-├── utils/
-├── constants/
-└── App.tsx
-```
-
-You may adjust this structure if you have a better architecture.
-
-Avoid putting API calls directly inside large UI components.
-
-Create reusable components where appropriate.
-
----
-
-# 10. STATE MANAGEMENT
-
-Do not introduce Redux unless necessary.
-
-The application is small enough that:
-
-* React state
-* custom hooks
-* API abstraction
-
-should be sufficient.
-
-Create a clean audit flow.
-
-For example:
-
-```text
-Start Audit
-    ↓
-audit_id
-    ↓
-poll GET /audit/:id
-    ↓
-RUNNING
-    ↓
-COMPLETED
-    ↓
-render results
-```
-
-Use sensible polling intervals.
-
-Stop polling when:
-
-* audit completes
-* audit fails
-* component unmounts
-
-Avoid unnecessary requests.
-
----
-
-# 11. LOADING / ERROR / EMPTY STATES
-
-These are important.
-
-Handle:
-
-### Start audit
-
-* invalid URL
-* API failure
-* server unavailable
-
-### Audit running
-
-Show:
-
-```text
-Audit in progress...
-Crawling website and analyzing pages.
-```
-
-Do not freeze the interface.
-
-### Audit failed
-
-Display a useful error message.
-
-### Audit completed with zero issues
-
-Do not show an empty-looking screen.
-
-Clearly communicate:
-
-```text
-No technical SEO issues detected.
-```
-
-### No pages
-
-Handle gracefully.
-
----
-
-# 12. URL NORMALIZATION
-
-Implement proper URL normalization.
-
-Consider:
-
-* trailing slash
-* hash fragments
-* relative URLs
-* absolute URLs
-* query strings
-* protocol
-* hostname casing
-* duplicate URLs
-
-For example:
-
-```text
-https://example.com
-https://example.com/
-https://example.com/#section
-```
-
-should not accidentally become multiple crawl targets.
-
-Document the exact normalization assumptions.
-
----
-
-# 13. NAVIGATION DETECTION
-
-This is one of the most important assignment requirements.
-
-The crawler should:
-
-1. Fetch homepage
-2. Inspect HTML
-3. Attempt to identify the primary navigation
-4. Extract links from it
-5. Crawl those internal pages
-
-Prefer semantic HTML:
-
-```html
-<nav>
-```
-
-If multiple navigation elements exist, use a sensible heuristic.
-
-You may consider:
-
-* `<header>`
-* `<nav>`
-* navigation-like class names
-* aria labels
-* link density
-
-But do NOT attempt to build an AI-powered navigation classifier.
-
-This is a technical SEO crawler, not an AI research project.
-
-Document assumptions clearly.
-
-For example:
-
-```text
-Primary navigation is detected using semantic <nav> elements first.
-If unavailable, the crawler falls back to navigation-like elements within
-the page header.
-Only same-origin HTTP(S) links are considered.
-```
-
-The exact approach is yours, but document it.
-
----
-
-# 14. CRAWLER SAFETY
-
-The crawler must NOT:
-
-* crawl the entire internet
-* follow external domains
-* endlessly follow query variations
-* recursively crawl every discovered page
-* create infinite loops
-* make uncontrolled parallel requests
-
-The intended crawl scope is:
-
-```text
-Homepage
-   ↓
-Primary Navigation Links
-   ↓
-Analyze those pages
-```
-
-Do not expand recursively into every internal link found on those pages unless the requirements clearly justify it.
-
-Internal links found on analyzed pages should be counted, not automatically crawled.
-
-This distinction is important.
-
----
-
-# 15. HTTP / NETWORK EDGE CASES
-
-Handle:
-
-* timeout
-* DNS failure
-* connection failure
-* redirects
-* 404
-* 500
-* malformed HTML
-* empty HTML
-* SSL problems where appropriate
-* non-HTML responses
-* very large responses
-
-Do not allow one failed page to crash the entire audit.
-
-One page failure should be represented as page-level audit data.
-
----
-
-# 16. PERFORMANCE
-
-Implement reasonable protections:
-
-* concurrency limit
-* request timeout
-* maximum response size
-* deduplication
-* no unnecessary duplicate requests
-
-Do not optimize prematurely.
-
-The objective is a reliable take-home implementation, not a distributed crawler platform.
-
----
-
-# 17. SECURITY
-
-Implement sensible baseline security:
-
-* validate all incoming data
-* do not trust arbitrary URLs
-* prevent obvious SSRF-style abuse where practical
-* restrict crawler protocols to HTTP/HTTPS
-* do not allow file:// or other dangerous protocols
-* avoid exposing stack traces in production responses
-* configure CORS appropriately
-* use environment variables for configuration
-* do not commit secrets
-
-If you implement URL restrictions for private/local network addresses, document them.
-
----
-
-# 18. LOGGING
-
-Use structured and useful logging.
-
-Logs should make it possible to understand:
-
-```text
-Audit started
-Homepage fetched
-Navigation detected
-N pages discovered
-Page analyzed
-Audit completed
-Audit failed
-```
-
-Do not flood logs with unnecessary HTML or massive payloads.
-
----
-
-# 19. TESTING
-
-Include meaningful tests for critical backend logic.
-
-Prioritize:
-
-### URL normalization
-
-Examples:
-
-```text
-https://example.com
-https://example.com/
-https://example.com/#pricing
-```
-
-### Navigation extraction
-
-Given HTML, verify correct links are detected.
-
-### Same-domain filtering
-
-Verify external links are excluded.
-
-### SEO checks
+docker compose down -v
+
+Then:
+
+docker compose build --no-cache
+
+Then:
+
+docker compose up
+
+Verify:
+
+[ ] MongoDB starts
+[ ] Backend starts
+[ ] Frontend starts
+[ ] Backend connects to MongoDB
+[ ] Frontend loads in browser
+[ ] Frontend can reach backend
+[ ] GET /health works
+[ ] POST /audit works
+[ ] Audit executes
+[ ] Audit status can be retrieved
+[ ] Results are persisted
+[ ] Frontend displays real audit results
+[ ] Existing loading state works
+[ ] Existing error state works
+[ ] Existing page breakdown works
+
+Do not consider Docker complete until the actual SEO audit workflow works end-to-end.
+
+==================================================
+17. DATABASE PERSISTENCE TEST
+==================================================
 
 Test:
 
-* missing title
-* short title
-* valid title
-* long title
-* missing meta description
-* short meta description
-* valid description
-* missing H1
-* multiple H1
-* valid H1
-* missing canonical
-* noindex
-* large page
-* internal links
+docker compose down
 
-### API validation
+Then:
 
-Test invalid audit URLs.
+docker compose up
 
-Do not try to achieve meaningless 100% coverage.
+Verify MongoDB data remains available because of the named volume.
 
-Test the business logic that matters.
+Do NOT use:
 
----
+docker compose down -v
 
-# 20. ENVIRONMENT CONFIGURATION
+when testing persistence because that intentionally removes the volume.
 
-Use environment variables.
+Use:
 
-Example:
+docker compose down
 
-```env
-PORT=5000
-MONGODB_URI=mongodb://mongodb:27017/seo-audit
-FRONTEND_URL=http://localhost:5173
-CRAWLER_TIMEOUT_MS=10000
-CRAWLER_CONCURRENCY=5
-```
+then:
 
-Do not hard-code infrastructure configuration.
+docker compose up
 
-Create `.env.example`.
+and verify the data remains.
 
-Never commit real secrets.
+==================================================
+18. CLEAN MACHINE SIMULATION
+==================================================
 
----
+The final test must prove that the application does not depend on local:
 
-# 21. ERROR RESPONSE FORMAT
+- node_modules
+- Node.js
+- npm packages
+- MongoDB
+- build output
 
-Use a consistent API error format.
+Docker should install/build everything it requires.
 
-For example:
+The evaluator should only need:
 
-```json
-{
-  "error": {
-    "code": "INVALID_URL",
-    "message": "Please provide a valid HTTP or HTTPS URL."
-  }
-}
-```
+Docker
+Docker Compose
 
-Use appropriate HTTP status codes.
+and the repository.
 
----
+==================================================
+19. README UPDATE
+==================================================
 
-# 22. CODE QUALITY
+Update README.md.
 
-Follow these principles:
+Add:
 
-* TypeScript strict mode
-* meaningful naming
-* small focused functions
-* separation of concerns
-* dependency injection where useful
-* no giant controller functions
-* no business logic inside React presentation components
-* no duplicated SEO rules
-* centralized constants
-* reusable types
-* clear interfaces
+# Docker Setup
 
-Avoid:
+## Prerequisites
 
-* unnecessary abstractions
-* unnecessary design patterns
-* over-engineering
-* huge files
-* magic numbers
-* duplicated logic
-* `any` unless absolutely unavoidable
+Only Docker / Docker Compose.
 
----
+## Run the Application
 
-# 23. PROJECT STRUCTURE
+docker compose up --build
 
-Use a monorepo-style structure:
+## Access the Application
 
-```text
-seo-audit-tool/
-│
-├── backend/
-│   ├── src/
-│   ├── tests/
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── ...
-│
-├── frontend/
-│   ├── src/
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── ...
-│
-├── README.md
-├── IMPLEMENTATION.md
-├── .gitignore
-└── .env.example
-```
+Frontend:
+http://localhost:<actual-port>
 
-Docker files will be added separately later.
+Backend:
+http://localhost:<actual-port>
 
----
+Health:
+http://localhost:<actual-port>/health
 
-# 24. IMPLEMENTATION.md
+## Stop
 
-Create and continuously maintain:
+docker compose down
 
-```text
-IMPLEMENTATION.md
-```
+## Rebuild
 
-This is extremely important.
+docker compose up --build
 
-It should document the actual implementation decisions made during development.
+## MongoDB
 
-Include sections such as:
+Explain that MongoDB runs inside Docker and data is persisted using a named volume.
 
-# Architecture
+## Environment Variables
 
-# Project Structure
+Explain `.env.example`.
 
-# Backend Architecture
+Make the README understandable to an evaluator who has never seen this project.
 
-# Frontend Architecture
+==================================================
+20. IMPLEMENTATION.MD UPDATE
+==================================================
 
-# Database Design
+Update IMPLEMENTATION.md with a Docker section containing:
 
-# API Contracts
+# Docker Architecture
 
-# Crawling Strategy
+# Container Structure
 
-# Navigation Detection
+# Docker Networking
 
-# URL Normalization
+# MongoDB Strategy
 
-# SEO Analysis Rules
+# Environment Configuration
 
-# Async Audit Execution
+# Frontend Runtime Strategy
 
-# Error Handling
+# Backend Runtime Strategy
 
-# Security Considerations
+# Health Checks
 
-# Performance Considerations
+# Persistence
 
-# Testing Strategy
+# Security
 
-# Assumptions
+# Production Build
 
 # Trade-offs
 
 # Known Limitations
 
-# Future Improvements
+Document the actual implementation.
 
-Do not write generic textbook content.
+Do not write generic Docker theory.
 
-Document the decisions that were actually made in this project.
+==================================================
+21. DO NOT BREAK LOCAL DEVELOPMENT
+==================================================
 
-Update this file as implementation progresses.
+If the project currently supports local development using MongoDB Atlas, preserve that capability where practical.
 
----
+The desired setup should be:
 
-# 25. README.md
+LOCAL:
 
-Create a professional README containing:
+Frontend
+   ↓
+Backend
+   ↓
+MongoDB Atlas
 
-## Project Overview
+DOCKER:
 
-## Features
+Frontend container / browser
+   ↓
+Backend container
+   ↓
+MongoDB container
 
-## Tech Stack
+Use environment configuration to switch between these environments.
 
-Explain why:
+Do not hard-code Docker-specific values into application code.
 
-* Express
-* React
-* MongoDB
-* TypeScript
+==================================================
+22. DO NOT MODIFY SEO LOGIC
+==================================================
 
-were selected.
+The following existing functionality must remain unchanged unless absolutely necessary:
 
-## Architecture
+- crawler
+- navigation detection
+- URL normalization
+- SEO analyzer
+- issue detection
+- audit persistence
+- audit APIs
+- frontend audit flow
+- page-level results
 
-Include a simple architecture diagram in Markdown.
+Dockerization is an infrastructure task.
 
-For example:
+Do not use this phase as an opportunity to refactor unrelated application code.
 
-```text
-React
-  |
-  | HTTP
-  ↓
-Express API
-  |
-  ↓
-Audit Service
-  |
-  ├── Crawler
-  ├── SEO Analyzer
-  └── Persistence
-          |
-          ↓
-       MongoDB
-```
+==================================================
+23. FINAL DEFINITION OF DONE
+==================================================
 
-## API Documentation
+The Docker phase is complete only when ALL of these are true:
 
-Document:
+[ ] docker-compose.yml exists
 
-```text
-POST /audit
-GET /audit/:audit_id
-```
+[ ] backend/Dockerfile exists
 
-## Local Development
+[ ] frontend/Dockerfile exists
 
-Explain how to run backend and frontend locally.
+[ ] frontend production build works
+
+[ ] backend production build works
+
+[ ] MongoDB runs in Docker
+
+[ ] MongoDB has persistent named volume
+
+[ ] Backend connects to Docker MongoDB
+
+[ ] Frontend is accessible from browser
+
+[ ] Backend API is accessible
+
+[ ] Frontend communicates with backend
+
+[ ] /health works
+
+[ ] POST /audit works
+
+[ ] GET /audit/:audit_id works
+
+[ ] SEO audit completes successfully
+
+[ ] Results persist
+
+[ ] Existing application behavior remains intact
+
+[ ] No real secrets are committed
+
+[ ] .dockerignore files exist
+
+[ ] .env.example exists
+
+[ ] README has complete Docker instructions
+
+[ ] IMPLEMENTATION.md documents Docker decisions
+
+[ ] Clean Docker build succeeds
+
+[ ] docker compose up --build works from a clean checkout
+
+[ ] No manual Node.js setup required
+
+[ ] No manual MongoDB setup required
+
+[ ] No MongoDB Atlas credentials required for Docker
+
+==================================================
+24. FINAL REPORT
+==================================================
+
+After completing all phases, provide:
+
+## Docker Implementation Summary
+
+## Files Created
+
+## Files Modified
+
+## Container Architecture
+
+## Ports
 
 ## Environment Variables
 
-## Assumptions
+## MongoDB Strategy
 
-## Navigation Detection
+## Validation Performed
 
-## SEO Rules
+## Problems Found
+
+## Problems Fixed
 
 ## Known Limitations
 
-## Future Improvements
+## Exact Command Used To Run The Application
 
-Docker instructions will be added later in a separate phase.
+The final expected command should be:
 
----
+docker compose up --build
 
-# 26. IMPORTANT PRODUCT THINKING
+Do not claim success unless the command was actually validated.
 
-Do not simply satisfy the API requirements.
+==================================================
+START NOW
+==================================================
 
-Think about the person using this product.
+Start with PHASE 1 — INSPECT.
 
-The user should quickly understand:
+Inspect the existing repository first.
 
-1. What was audited?
-2. How many pages were checked?
-3. Is the website healthy?
-4. What are the biggest issues?
-5. Which pages have problems?
-6. What specifically is wrong with each page?
+Do not immediately generate Dockerfiles.
 
-The interface should make the data understandable without requiring the user to inspect raw JSON.
+Do not immediately modify application code.
 
----
+First understand the existing implementation and report the proposed Docker architecture.
 
-# 27. DESIGN DIRECTION
-
-Use a clean professional SaaS interface.
-
-You may use a lightweight UI library if it improves development speed, but do not spend the majority of the assignment building a design system.
-
-Prioritize:
-
-* spacing
-* typography
-* hierarchy
-* readable tables
-* clear issue labels
-* responsive layout
-* accessible controls
-
-Avoid unnecessary animations.
-
----
-
-# 28. PHASE EXECUTION RULE
-
-This is extremely important.
-
-Do not implement everything at once.
-
-Work through the project phase by phase.
-
-For every phase:
-
-### Step 1
-
-Explain briefly what you are going to implement.
-
-### Step 2
-
-Implement it.
-
-### Step 3
-
-Review the implementation for:
-
-* bugs
-* type errors
-* architectural problems
-* missing requirements
-* edge cases
-
-### Step 4
-
-Run appropriate tests/build/type checks.
-
-### Step 5
-
-Fix issues found during validation.
-
-### Step 6
-
-Update `IMPLEMENTATION.md`.
-
-### Step 7
-
-Give me a concise phase completion report containing:
-
-```text
-Phase:
-Implemented:
-Files changed:
-Validation performed:
-Issues found:
-Issues fixed:
-Remaining concerns:
-```
-
-Then STOP.
-
-Wait for me to explicitly tell you to continue to the next phase.
-
-Do not automatically continue through all phases.
-
----
-
-# 29. PHASE ORDER
-
-Use this implementation order unless your architectural analysis shows a better sequence:
-
-```text
-Phase 0 — Architecture & Planning
-
-Phase 1 — Backend Foundation
-
-Phase 2 — Database Models & Repository Layer
-
-Phase 3 — Crawler Engine
-
-Phase 4 — SEO Analysis Engine
-
-Phase 5 — Audit Service & APIs
-
-Phase 6 — Backend Tests & Hardening
-
-Phase 7 — React Frontend Foundation
-
-Phase 8 — Audit Start Flow
-
-Phase 9 — Audit Overview
-
-Phase 10 — Page-Level Breakdown
-
-Phase 11 — Frontend Error/Loading/Empty States
-
-Phase 12 — Frontend Polish & Accessibility
-
-Phase 13 — End-to-End Validation
-
-Phase 14 — README + Final Documentation
-
-```
-
-Docker is intentionally NOT part of this prompt.
-
-We will handle Docker separately after the application itself is stable.
-
----
-
-# 30. IMPORTANT: DO NOT FAKE FUNCTIONALITY
-
-Do not create mock audit data merely to make the UI look complete.
-
-The frontend must eventually consume the real backend API.
-
-Do not hard-code:
-
-```text
-missing_titles: 3
-multiple_h1: 2
-```
-
-etc.
-
-Those values must come from the actual crawler and analyzer.
-
----
-
-# 31. IMPORTANT: DO NOT OVER-SCOPE
-
-Do NOT add:
-
-* authentication
-* user accounts
-* teams
-* billing
-* Redis
-* queues
-* Kubernetes
-* microservices
-* AI-generated SEO recommendations
-* Google Search Console
-* Lighthouse
-* external SEO APIs
-
-unless explicitly required later.
-
-The goal is a strong, focused technical SEO audit MVP.
-
----
-
-# 32. DEFINITION OF DONE
-
-The application is considered complete only when:
-
-* Backend runs successfully
-* Frontend runs successfully
-* MongoDB persistence works
-* `POST /audit` works
-* `GET /audit/:audit_id` works
-* Audit executes asynchronously
-* Homepage is crawled
-* Primary navigation is detected
-* Internal navigation URLs are deduplicated
-* External URLs are ignored
-* SEO checks work
-* Results persist in MongoDB
-* Frontend consumes real API results
-* Loading states work
-* Error states work
-* Empty/success states work
-* Page-level issues are understandable
-* Tests cover critical logic
-* TypeScript checks pass
-* Production build passes
-* README exists
-* IMPLEMENTATION.md exists
-* No obvious secrets are committed
-* Code is clean enough for a senior-engineer code review
-
-Docker will be validated separately afterward.
-
----
-
-# 33. START NOW
-
-First, do ONLY **Phase 0 — Architecture & Planning**.
-
-Before writing implementation code:
-
-1. Analyze the requirements.
-2. Identify ambiguities.
-3. Propose the final architecture.
-4. Propose the MongoDB schema.
-5. Propose the backend folder structure.
-6. Propose the frontend folder structure.
-7. Define the API contracts.
-8. Define the crawler algorithm.
-9. Define navigation detection logic.
-10. Define URL normalization rules.
-11. Define SEO issue rules and severity.
-12. Define the asynchronous audit lifecycle.
-13. Identify important edge cases.
-14. Define the testing strategy.
-15. Define the phase plan.
-16. Create `IMPLEMENTATION.md`.
-17. Record the architectural decisions there.
-
-Do NOT implement Phase 1 yet.
-
-After completing Phase 0, stop and wait for my approval.
-
-Remember:
-
-**Production-quality code, but take-home-project scope.**
-
-**Correctness over visual polish.**
-
-**Simple architecture over unnecessary complexity.**
-
-**Real crawler + real database + real API + real React UI.**
-
-**No fake/mock final functionality.**
+Then proceed methodically through the phases, validating each step.

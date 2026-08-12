@@ -3,7 +3,8 @@ import { initializeApiClient } from './api/client';
 import { StartPage } from './pages/StartPage';
 import { AuditResultsPage } from './pages/AuditResultsPage';
 import { CursorTrail } from './components/CursorTrail';
-import './App.css';
+import { OceanBackground } from './components/OceanBackground';
+import './styles/index.css';
 
 function getAuditIdFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get('audit');
@@ -16,6 +17,7 @@ export function App() {
     initializeApiClient();
   }, []);
 
+  // Keep the view in sync when the user navigates with back/forward.
   useEffect(() => {
     function handlePopState() {
       setAuditId(getAuditIdFromUrl());
@@ -38,12 +40,26 @@ export function App() {
 
   return (
     <div className="app">
+      <OceanBackground />
       <CursorTrail />
+
       <header className="app-header">
-        <h1>
-          <span aria-hidden="true">🏴‍☠️</span> Zensor — Technical SEO Audit Tool
-        </h1>
+        <a
+          className="brand"
+          href={window.location.pathname}
+          onClick={(event) => {
+            event.preventDefault();
+            handleReset();
+          }}
+        >
+          <span className="brand-mark" aria-hidden="true">
+            🏴‍☠️
+          </span>
+          <span className="brand-name">Zensor</span>
+          <span className="brand-sub">Technical SEO Audit</span>
+        </a>
       </header>
+
       <main className="app-main">
         {auditId ? (
           <AuditResultsPage auditId={auditId} onReset={handleReset} />
@@ -51,6 +67,11 @@ export function App() {
           <StartPage onAuditStarted={handleAuditStarted} />
         )}
       </main>
+
+      <footer className="app-footer">
+        Crawls your homepage and primary navigation only — internal links on those
+        pages are counted, not followed.
+      </footer>
     </div>
   );
 }

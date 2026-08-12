@@ -1,133 +1,231 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { IssueBadge } from '../../components/IssueBadge';
-import { getIssueDefinition } from '../../constants/issues';
-import { theme } from '../../constants/theme';
+import { MetricTile } from '../../components/MetricTile';
+import { getPageSeverity, Severity } from '../../utils/health';
+import { formatKb, formatPath, httpChipClass } from '../../utils/formatters';
 import type { PageResult } from '../../types/audit';
 
 export interface PageBreakdownProps {
   pages: PageResult[];
 }
 
-type Severity = 'critical' | 'warning' | 'healthy';
+type Filter = 'all' | Severity;
+type SortKey = 'issues' | 'url' | 'status';
 
-function getPageSeverity(issues: string[]): Severity {
-  if (issues.length === 0) return 'healthy';
-  if (issues.some((code) => getIssueDefinition(code).severity === 'critical')) return 'critical';
-  return 'warning';
-}
-
-const SEVERITY_ICON: Record<Severity, string> = {
-  critical: '🔴',
-  warning: '🟠',
-  healthy: '🟢',
+const SEVERITY_META: Record<Severity, { label: string; chip: string; accent: string }> = {
+  critical: { label: 'Critical', chip: 'chip-crit', accent: 'var(--c-critical-solid)' },
+  warning: { label: 'Warning', chip: 'chip-warn', accent: 'var(--c-warning-solid)' },
+  healthy: { label: 'Healthy', chip: 'chip-good', accent: 'var(--c-good-solid)' },
 };
 
-const SEVERITY_LABEL: Record<Severity, string> = {
-  critical: 'Critical',
-  warning: 'Warning',
-  healthy: 'Healthy',
-};
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'critical', label: 'Critical' },
+  { value: 'warning', label: 'Warning' },
+  { value: 'healthy', label: 'Healthy' },
+];
 
 export function PageBreakdown({ pages }: PageBreakdownProps) {
-  const [expandedUrls, setExpandedUrls] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<Filter>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('issues');
 
-  function toggleExpanded(url: string) {
-    setExpandedUrls((prev) => {
+  const decorated = useMemo(
+    () => pages.map((page) => ({ page, severity: getPageSeverity(page.issues) })),
+    [pages]
+  );
+
+  const visible = useMemo(() => {
+    const filtered =
+      filter === 'all'
+        ? decorated
+        : decorated.filter((row) => row.severity === filter);
+
+    return [...filtered].sort((a, b) => {
+      if (sortKey === 'issues') return b.page.issues.length - a.page.issues.length;
+      if (sortKey === 'status') return (b.page.statusCode ?? 0) - (a.page.statusCode ?? 0);
+      return a.page.url.localeCompare(b.page.url);
+    });
+  }, [decorated, filter, sortKey]);
+
+  function toggle(url: string) {
+    setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(url)) {
-        next.delete(url);
-      } else {
-        next.add(url);
-      }
+      next.has(url) ? next.delete(url) : next.add(url);
       return next;
     });
   }
 
   if (pages.length === 0) {
     return (
-      <div style={styles.empty}>
-        <p>🏝️ No pages were crawled for this audit.</p>
-      </div>
+      <section className="panel empty-state">
+        <div className="empty-icon" aria-hidden="true">
+          🏝️
+        </div>
+        <p className="empty-title">No pages were crawled</p>
+        <p>
+          The audit finished without analyzing any pages. The homepage may have been
+          unreachable, or it returned no usable HTML.
+        </p>
+      </section>
     );
   }
 
   return (
-    <div style={styles.container}>
-      <h3 style={styles.heading}>🗺️ Page-Level Breakdown</h3>
-      <div style={styles.tableWrapper}>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>Severity</th>
-              <th style={styles.th}>Page URL</th>
-              <th style={styles.th}>HTTP Status</th>
-              <th style={styles.th}>Issues</th>
-              <th style={styles.th} />
-            </tr>
-          </thead>
-          <tbody>
-            {pages.map((page) => {
-              const severity = getPageSeverity(page.issues);
-              const isExpanded = expandedUrls.has(page.url);
+    <section>
+      <div className="panel-head">
+        <h2 className="section-title">
+          <span aria-hidden="true">🗺️</span> Page breakdown
+        </h2>
 
-              return (
+        <div className="filters">
+          <div className="seg" role="group" aria-label="Filter pages by severity">
+            {FILTERS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`seg-btn ${filter === option.value ? 'is-active' : ''}`}
+                aria-pressed={filter === option.value}
+                onClick={() => setFilter(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          <label className="sr-only" htmlFor="sort-pages">
+            Sort pages by
+          </label>
+          <select
+            id="sort-pages"
+            className="select-sm"
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+          >
+            <option value="issues">Most issues</option>
+            <option value="url">URL (A–Z)</option>
+            <option value="status">HTTP status</option>
+          </select>
+        </div>
+      </div>
+
+      <p className="result-count" aria-live="polite">
+        Showing {visible.length} of {pages.length}{' '}
+        {pages.length === 1 ? 'page' : 'pages'}
+      </p>
+
+      {visible.length === 0 ? (
+        <div className="panel empty-state">
+          <div className="empty-icon" aria-hidden="true">
+            🔍
+          </div>
+          <p className="empty-title">No pages match this filter</p>
+          <p>Try selecting a different severity.</p>
+        </div>
+      ) : (
+        <div className="table-wrap scroll-x" style={{ marginTop: 'var(--s-3)' }}>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th scope="col">Severity</th>
+                <th scope="col">Page</th>
+                <th scope="col" className="col-optional">
+                  Status
+                </th>
+                <th scope="col" className="num">
+                  Issues
+                </th>
+                <th scope="col" className="num">
+                  <span className="sr-only">Expand</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map(({ page, severity }) => (
                 <PageRow
                   key={page.url}
                   page={page}
                   severity={severity}
-                  isExpanded={isExpanded}
-                  onToggle={() => toggleExpanded(page.url)}
+                  isOpen={expanded.has(page.url)}
+                  onToggle={() => toggle(page.url)}
                 />
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
 interface PageRowProps {
   page: PageResult;
   severity: Severity;
-  isExpanded: boolean;
+  isOpen: boolean;
   onToggle: () => void;
 }
 
-function PageRow({ page, severity, isExpanded, onToggle }: PageRowProps) {
+function PageRow({ page, severity, isOpen, onToggle }: PageRowProps) {
+  const meta = SEVERITY_META[severity];
+
   return (
     <>
-      <tr className="table-row-interactive" style={styles.row} onClick={onToggle}>
-        <td style={styles.td}>
-          <span title={SEVERITY_LABEL[severity]} aria-hidden="true">
-            {SEVERITY_ICON[severity]}
+      <tr
+        className={`row-main ${isOpen ? 'is-open' : ''}`}
+        style={{ ['--row-accent' as string]: meta.accent }}
+        onClick={onToggle}
+      >
+        <td>
+          <span className={`chip ${meta.chip}`}>
+            <span className="chip-dot" aria-hidden="true" />
+            {meta.label}
           </span>
-          <span className="sr-only">{SEVERITY_LABEL[severity]}</span>
         </td>
-        <td style={{ ...styles.td, ...styles.urlCell }}>{page.url}</td>
-        <td style={styles.td}>{page.statusCode ?? '—'}</td>
-        <td style={styles.td}>{page.issues.length}</td>
-        <td style={{ ...styles.td, textAlign: 'right' as const }}>
+
+        <td className="cell-url">
+          <span title={page.url}>{formatPath(page.url)}</span>
+        </td>
+
+        <td className="col-optional">
+          <span className={`chip ${httpChipClass(page.statusCode)}`}>
+            {page.statusCode ?? 'Failed'}
+          </span>
+        </td>
+
+        <td className="num tnum">
+          {page.issues.length === 0 ? (
+            <span className="sev-mute">0</span>
+          ) : (
+            <strong>{page.issues.length}</strong>
+          )}
+        </td>
+
+        <td className="num">
           <button
             type="button"
-            className="button-secondary"
-            style={styles.toggleButton}
-            aria-expanded={isExpanded}
-            aria-label={`${isExpanded ? 'Collapse' : 'Expand'} details for ${page.url}`}
-            onClick={(e) => {
-              e.stopPropagation();
+            className="btn btn-sm btn-icon"
+            aria-expanded={isOpen}
+            aria-label={`${isOpen ? 'Collapse' : 'Expand'} details for ${page.url}`}
+            onClick={(event) => {
+              event.stopPropagation();
               onToggle();
             }}
           >
-            {isExpanded ? '▲' : '▼'}
+            <span className={`chevron ${isOpen ? 'is-open' : ''}`} aria-hidden="true">
+              ▾
+            </span>
           </button>
         </td>
       </tr>
 
-      {isExpanded && (
-        <tr>
-          <td colSpan={5} style={styles.expandedCell}>
-            <PageDetail page={page} />
+      {isOpen && (
+        <tr className="row-detail">
+          <td colSpan={5}>
+            <div className="detail-shell">
+              <div className="detail-inner">
+                <PageDetail page={page} />
+              </div>
+            </div>
           </td>
         </tr>
       )}
@@ -136,139 +234,108 @@ function PageRow({ page, severity, isExpanded, onToggle }: PageRowProps) {
 }
 
 function PageDetail({ page }: { page: PageResult }) {
-  if (page.fetchError) {
+  const { metrics, issues, fetchError, url } = page;
+
+  if (fetchError) {
     return (
-      <div style={styles.detailGrid}>
-        <DetailRow label="Fetch Error" value={page.fetchError} />
-      </div>
+      <>
+        <p className="eyebrow" style={{ marginBottom: 'var(--s-2)' }}>
+          Could not fetch this page
+        </p>
+        <p className="alert-msg">{fetchError}</p>
+        <p className="range-hint" style={{ marginTop: 'var(--s-2)' }}>
+          {url}
+        </p>
+      </>
     );
   }
 
   return (
-    <div>
-      <div style={styles.detailGrid}>
-        <DetailRow label="Title Length" value={`${page.metrics.titleLength} chars`} />
-        <DetailRow
-          label="Meta Description Length"
-          value={`${page.metrics.metaDescriptionLength} chars`}
+    <div className="stack">
+      <div className="detail-grid">
+        <MetricTile
+          label="Title length"
+          value={`${metrics.titleLength} chars`}
+          range={{ min: 30, max: 65, actual: metrics.titleLength, scaleMax: 90 }}
+          tone={
+            metrics.titleLength >= 30 && metrics.titleLength <= 65 ? 'good' : 'warn'
+          }
         />
-        <DetailRow label="H1 Count" value={String(page.metrics.h1Count)} />
-        <DetailRow label="Canonical" value={page.metrics.canonical || 'None'} />
-        <DetailRow label="Noindex" value={page.metrics.noindex ? 'Yes' : 'No'} />
-        <DetailRow label="Page Size" value={`${page.metrics.pageSizeKb} KB`} />
-        <DetailRow label="Internal Links" value={String(page.metrics.internalLinkCount)} />
+        <MetricTile
+          label="Meta description"
+          value={`${metrics.metaDescriptionLength} chars`}
+          range={{
+            min: 70,
+            max: 160,
+            actual: metrics.metaDescriptionLength,
+            scaleMax: 200,
+          }}
+          tone={
+            metrics.metaDescriptionLength >= 70 && metrics.metaDescriptionLength <= 160
+              ? 'good'
+              : 'warn'
+          }
+        />
+        <MetricTile
+          label="H1 count"
+          value={String(metrics.h1Count)}
+          hint="Exactly one H1 is recommended"
+          tone={metrics.h1Count === 1 ? 'good' : 'crit'}
+        />
+        <MetricTile
+          label="Page size"
+          value={formatKb(metrics.pageSizeKb)}
+          hint="Flagged above 2 MB"
+          tone={metrics.pageSizeKb > 2048 ? 'warn' : 'good'}
+        />
+        <MetricTile
+          label="Canonical"
+          value={metrics.canonical ? 'Present' : 'Missing'}
+          hint={metrics.canonical ?? undefined}
+          tone={metrics.canonical ? 'good' : 'warn'}
+        />
+        <MetricTile
+          label="Noindex"
+          value={metrics.noindex ? 'Yes' : 'No'}
+          hint={
+            metrics.noindex ? 'This page is excluded from search' : 'Indexable by search engines'
+          }
+          tone={metrics.noindex ? 'crit' : 'good'}
+        />
+        <MetricTile
+          label="Internal links"
+          value={String(metrics.internalLinkCount)}
+          hint="Counted, not crawled"
+        />
+        <MetricTile
+          label="HTTP status"
+          value={String(page.statusCode ?? '—')}
+          tone={
+            page.statusCode && page.statusCode >= 200 && page.statusCode < 300
+              ? 'good'
+              : 'crit'
+          }
+        />
       </div>
 
-      {page.issues.length > 0 && (
-        <div style={styles.issuesSection}>
-          <p style={styles.issuesLabel}>Detected Issues</p>
-          <div>
-            {page.issues.map((code) => (
-              <IssueBadge key={code} code={code} />
+      <div>
+        <p className="eyebrow" style={{ marginBottom: 'var(--s-2)' }}>
+          {issues.length > 0
+            ? `Detected issues (${issues.length})`
+            : 'Detected issues'}
+        </p>
+        {issues.length === 0 ? (
+          <p className="sev-good">✓ This page passed every check.</p>
+        ) : (
+          <div className="issue-list">
+            {issues.map((code, i) => (
+              <IssueBadge key={code} code={code} index={i} />
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      <p className="range-hint mono">{url}</p>
     </div>
   );
 }
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={styles.detailRow}>
-      <span style={styles.detailLabel}>{label}</span>
-      <span style={styles.detailValue}>{value}</span>
-    </div>
-  );
-}
-
-const styles = {
-  container: {
-    marginTop: '24px',
-  },
-  heading: {
-    marginBottom: '16px',
-    color: theme.textPrimary,
-  },
-  tableWrapper: {
-    overflowX: 'auto' as const,
-    border: `1px solid ${theme.border}`,
-    borderRadius: '10px',
-    backgroundColor: theme.bgOcean,
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse' as const,
-    fontSize: '14px',
-  },
-  th: {
-    textAlign: 'left' as const,
-    padding: '12px 16px',
-    backgroundColor: theme.bgOceanLight,
-    borderBottom: `1px solid ${theme.border}`,
-    fontSize: '12px',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-    color: theme.textMuted,
-  },
-  row: {
-    cursor: 'pointer',
-    borderBottom: `1px solid ${theme.border}`,
-  },
-  td: {
-    padding: '12px 16px',
-    verticalAlign: 'middle' as const,
-    color: theme.textPrimary,
-  },
-  toggleButton: {
-    padding: '4px 10px',
-    fontSize: '13px',
-    backgroundColor: 'transparent',
-  },
-  urlCell: {
-    wordBreak: 'break-all' as const,
-    maxWidth: '400px',
-  },
-  expandedCell: {
-    padding: '16px 24px',
-    backgroundColor: theme.bgDeep,
-    borderBottom: `1px solid ${theme.border}`,
-  },
-  detailGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '8px',
-  },
-  detailRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '8px',
-    padding: '6px 0',
-  },
-  detailLabel: {
-    color: theme.textMuted,
-  },
-  detailValue: {
-    fontWeight: '600',
-    color: theme.textPrimary,
-    wordBreak: 'break-all' as const,
-    textAlign: 'right' as const,
-  },
-  issuesSection: {
-    marginTop: '16px',
-    paddingTop: '16px',
-    borderTop: `1px solid ${theme.border}`,
-  },
-  issuesLabel: {
-    fontSize: '12px',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-    color: theme.textMuted,
-    marginBottom: '8px',
-  },
-  empty: {
-    padding: '40px',
-    textAlign: 'center' as const,
-    color: theme.textMuted,
-  },
-};
